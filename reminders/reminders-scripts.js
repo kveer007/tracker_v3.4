@@ -1,5 +1,5 @@
 /**
- * Health Tracker App - Reminders Management System
+ * Health Tracker App - Reminders Management System (FIXED VERSION)
  * 
  * Handles all reminder functionality including:
  * - System notifications (water/protein alerts, intervals)
@@ -232,7 +232,7 @@ class RemindersManager {
   }
   
   /**
-   * Attach event listeners to panel elements
+   * Attach event listeners to panel elements - FIXED VERSION
    */
   attachPanelEventListeners() {
     console.log('Attaching panel event listeners for view:', this.currentView);
@@ -319,7 +319,7 @@ class RemindersManager {
   }
   
   /**
-   * Attach system notification listeners using event delegation
+   * FIXED: Attach system notification listeners using event delegation
    */
   attachSystemNotificationListeners() {
     // Use event delegation for system notification toggles
@@ -329,17 +329,53 @@ class RemindersManager {
         console.log('System notification toggle:', type, e.target.checked);
         this.toggleSystemNotification(type, e.target.checked);
       }
-    });
-    
-    // Use event delegation for day toggles
-    this.elements.remindersPanel.addEventListener('click', (e) => {
-      if (e.target.matches('.day-toggle')) {
-        const type = e.target.dataset.notificationType;
-        const day = parseInt(e.target.dataset.day);
-        console.log('Day toggle clicked:', type, day);
-        this.toggleSystemNotificationDay(type, day);
+      
+      // Handle system setting inputs (time, interval, etc.)
+      if (e.target.matches('.system-setting-input')) {
+        const type = e.target.dataset.type;
+        const setting = e.target.dataset.setting;
+        const value = e.target.value;
+        console.log('System setting changed:', type, setting, value);
+        this.updateSystemNotificationSetting(type, setting, value);
       }
     });
+    
+    // Use event delegation for day toggles - FIXED
+    this.elements.remindersPanel.addEventListener('click', (e) => {
+      if (e.target.matches('.day-toggle')) {
+        e.preventDefault();
+        const type = e.target.dataset.notificationType;
+        const day = parseInt(e.target.dataset.day);
+        
+        if (type) {
+          // System notification day toggle
+          console.log('System day toggle clicked:', type, day);
+          this.toggleSystemNotificationDay(type, day);
+        } else {
+          // Custom reminder day toggle
+          console.log('Custom reminder day toggle clicked:', day);
+          e.target.classList.toggle('active');
+        }
+      }
+    });
+  }
+  
+  /**
+   * NEW: Handle system notification setting updates
+   */
+  updateSystemNotificationSetting(type, setting, value) {
+    if (!this.data.systemNotifications[type]) return;
+    
+    if (setting === 'time') {
+      this.data.systemNotifications[type].time = value;
+    } else if (setting === 'interval') {
+      this.data.systemNotifications[type].interval = parseInt(value);
+    }
+    
+    this.saveData();
+    this.scheduleAllReminders();
+    
+    utils.showToast(`${this.getSystemNotificationTitle(type)} ${setting} updated`, 'success');
   }
   
   /**
@@ -659,22 +695,42 @@ class RemindersManager {
         <div class="system-notification-card ${notification.enabled ? 'enabled' : ''}">
           <div class="system-notification-header">
             <div class="system-notification-info">
-              <h4>${title}</h4>
-              <p>${description}</p>
+              <div class="system-notification-icon">
+                <i class="material-icons-round">${this.getSystemNotificationIcon(type)}</i>
+              </div>
+              <div class="system-notification-details">
+                <h4>${title}</h4>
+                <p class="system-notification-summary">${description}</p>
+              </div>
             </div>
-            <label class="reminder-toggle-switch">
-              <input type="checkbox" 
-                     class="system-notification-toggle"
-                     data-type="${type}"
-                     ${notification.enabled ? 'checked' : ''}>
-              <span class="reminder-toggle-slider"></span>
-            </label>
+            <div class="system-notification-controls">
+              <label class="reminder-toggle-switch">
+                <input type="checkbox" 
+                       class="system-notification-toggle"
+                       data-type="${type}"
+                       ${notification.enabled ? 'checked' : ''}>
+                <span class="reminder-toggle-slider"></span>
+              </label>
+            </div>
           </div>
           
           ${notification.enabled ? this.renderSystemNotificationSettings(type, notification) : ''}
         </div>
       `;
     }).join('');
+  }
+  
+  /**
+   * Get system notification icon
+   */
+  getSystemNotificationIcon(type) {
+    switch (type) {
+      case 'waterAlert': return 'water_drop';
+      case 'waterInterval': return 'schedule';
+      case 'proteinAlert': return 'restaurant';
+      case 'proteinInterval': return 'timer';
+      default: return 'notifications';
+    }
   }
   
   /**
@@ -797,7 +853,7 @@ class RemindersManager {
   }
   
   /**
-   * Toggle system notification day
+   * FIXED: Toggle system notification day
    */
   toggleSystemNotificationDay(type, day) {
     console.log('Toggling day for notification:', type, day);
@@ -811,8 +867,10 @@ class RemindersManager {
     const dayIndex = days.indexOf(day);
     
     if (dayIndex === -1) {
+      // Add day
       days.push(day);
     } else {
+      // Remove day  
       days.splice(dayIndex, 1);
     }
     
@@ -820,11 +878,17 @@ class RemindersManager {
     this.saveData();
     this.scheduleAllReminders();
     
-    // Update button appearance
+    // Update button appearance immediately
     const button = document.querySelector(`[data-notification-type="${type}"][data-day="${day}"]`);
     if (button) {
-      button.classList.toggle('active', days.includes(day));
+      if (days.includes(day)) {
+        button.classList.add('active');
+      } else {
+        button.classList.remove('active');
+      }
     }
+    
+    console.log('Updated days for', type, ':', days);
   }
   
   /**
@@ -1216,7 +1280,7 @@ class RemindersManager {
   }
   
   /**
-   * Attach form event listeners
+   * FIXED: Attach form event listeners
    */
   attachFormEventListeners() {
     // Repeat dropdown change
@@ -1230,12 +1294,7 @@ class RemindersManager {
       });
     }
     
-    // Day toggle buttons
-    document.querySelectorAll('.day-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        btn.classList.toggle('active');
-      });
-    });
+    // Day toggle buttons handled by main event delegation now
     
     // Add alert button
     const addAlertBtn = document.getElementById('add-alert-btn');
@@ -1245,12 +1304,13 @@ class RemindersManager {
       });
     }
     
-    // Remove alert buttons
-    document.querySelectorAll('.remove-alert-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const index = parseInt(e.target.dataset.index);
+    // Remove alert buttons - use event delegation
+    this.elements.remindersPanel.addEventListener('click', (e) => {
+      if (e.target.matches('.remove-alert-btn') || e.target.closest('.remove-alert-btn')) {
+        const btn = e.target.matches('.remove-alert-btn') ? e.target : e.target.closest('.remove-alert-btn');
+        const index = parseInt(btn.dataset.index);
         this.removeAlertTime(index);
-      });
+      }
     });
   }
   
@@ -1286,11 +1346,6 @@ class RemindersManager {
     `;
     
     container.appendChild(newAlert);
-    
-    // Attach event listener to remove button
-    newAlert.querySelector('.remove-alert-btn').addEventListener('click', (e) => {
-      this.removeAlertTime(parseInt(e.target.dataset.index));
-    });
   }
   
   /**
@@ -1314,7 +1369,7 @@ class RemindersManager {
   }
   
   /**
-   * Save custom reminder (add or update)
+   * FIXED: Save custom reminder (add or update)
    */
   saveCustomReminder() {
     const title = document.getElementById('reminder-title')?.value?.trim();
@@ -1333,11 +1388,11 @@ class RemindersManager {
       return;
     }
     
-    // Get selected days for weekly repeat
+    // Get selected days for weekly repeat - FIXED
     let days = [];
     if (repeat === 'weekly') {
-      const dayCheckboxes = document.querySelectorAll('.day-toggle.active');
-      days = Array.from(dayCheckboxes).map(cb => parseInt(cb.dataset.day));
+      const activeDayToggles = document.querySelectorAll('.day-toggle.active:not([data-notification-type])');
+      days = Array.from(activeDayToggles).map(toggle => parseInt(toggle.dataset.day));
       if (days.length === 0) {
         utils.showToast('Please select at least one day for weekly reminders', 'error');
         return;
